@@ -1,0 +1,84 @@
+# ═══════════════════════════════════════════════════════════════════
+# BookStack Environment Configuration Template
+# Version: 1.0.0
+# 
+# Key settings for reverse proxy setup behind HAProxy
+# ═══════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────
+# Application URL
+# Must match your public URL (with https://)
+# ─────────────────────────────────────────────────────────────────────
+APP_URL=https://books.therapeuticsociety.org
+
+# ─────────────────────────────────────────────────────────────────────
+# Trusted Proxies
+# Required for HAProxy reverse proxy setup
+# Options:
+#   * = Trust all proxies (simple but less secure)
+#   192.168.86.1 = Trust only pfSense (more secure)
+# ─────────────────────────────────────────────────────────────────────
+TRUSTED_PROXIES=*
+
+# Alternative: Trust only pfSense
+# TRUSTED_PROXIES=192.168.86.1
+
+# ─────────────────────────────────────────────────────────────────────
+# Database Configuration
+# (Usually already configured by Turnkey)
+# ─────────────────────────────────────────────────────────────────────
+# DB_HOST=localhost
+# DB_DATABASE=bookstack
+# DB_USERNAME=bookstack
+# DB_PASSWORD=your-password-here
+
+# ─────────────────────────────────────────────────────────────────────
+# Mail Configuration (Optional)
+# ─────────────────────────────────────────────────────────────────────
+# MAIL_DRIVER=smtp
+# MAIL_HOST=smtp.example.com
+# MAIL_PORT=587
+# MAIL_USERNAME=your-email@example.com
+# MAIL_PASSWORD=your-mail-password
+# MAIL_ENCRYPTION=tls
+# MAIL_FROM=bookstack@therapeuticsociety.org
+# MAIL_FROM_NAME="Therapeutic Society Wiki"
+
+# ─────────────────────────────────────────────────────────────────────
+# Storage Configuration (Optional)
+# ─────────────────────────────────────────────────────────────────────
+# Default is local storage
+# STORAGE_TYPE=local
+
+# For S3-compatible storage:
+# STORAGE_TYPE=s3
+# STORAGE_S3_KEY=your-key
+# STORAGE_S3_SECRET=your-secret
+# STORAGE_S3_BUCKET=your-bucket
+# STORAGE_S3_REGION=us-east-1
+
+# ─────────────────────────────────────────────────────────────────────
+# Authentication (Optional)
+# ─────────────────────────────────────────────────────────────────────
+# Default is standard email/password
+# AUTH_METHOD=standard
+
+# For LDAP:
+# AUTH_METHOD=ldap
+# LDAP_SERVER=ldap://your-ldap-server:389
+# LDAP_BASE_DN=dc=example,dc=com
+# ... additional LDAP settings
+
+# ─────────────────────────────────────────────────────────────────────
+# Security Settings
+# ─────────────────────────────────────────────────────────────────────
+# Session lifetime in minutes (default: 120)
+SESSION_LIFETIME=120
+
+# Allow public access without login (default: false)
+# APP_VIEWS_BOOKS=false
+
+# ─────────────────────────────────────────────────────────────────────
+# Debugging (disable in production)
+# ─────────────────────────────────────────────────────────────────────
+APP_DEBUG=false
