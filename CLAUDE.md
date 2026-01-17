@@ -1,7 +1,143 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+# README
+
+[![Infrastructure](https://img.shields.io/badge/Infrastructure-Self--Hosted-blue)]()
+[![pfSense](https://img.shields.io/badge/Firewall-pfSense-orange)]()
+[![WordPress](https://img.shields.io/badge/CMS-WordPress-21759b)]()
+[![BookStack](https://img.shields.io/badge/Wiki-BookStack-0288d1)]()
+
+Self-hosted web infrastructure for Therapeutic Society organization.
+
+## Live Sites
+
+| Site | URL | Purpose |
+|------|-----|---------|
+| Main Website | [therapeuticsociety.org](https://therapeuticsociety.org) | Public website |
+| Alternate Domain | [therapeutic-society.org](https://therapeutic-society.org) | Secondary domain |
+| Knowledge Base | [books.therapeuticsociety.org](https://books.therapeuticsociety.org) | Documentation wiki |
+
+## Architecture
+
+```
+Internet → Cloudflare (DNS/CDN) → pfSense (HAProxy) → Internal VMs
+                                         │
+                     ┌───────────────────┴───────────────────┐
+                     │                                       │
+              WordPress VM                            BookStack VM
+            192.168.86.214:80                       192.168.86.113:80
+```
+
+## Project Structure
+
+```
+therapeutic-society-infra/
+├── README.md                 # This file
+├── docs/
+│   └── THERAPEUTIC_SOCIETY_PROJECT.md  # Full documentation
+├── scripts/
+│   ├── backup-wordpress.sh   # WordPress backup script
+│   ├── backup-bookstack.sh   # BookStack backup script
+│   ├── update-wordpress.sh   # WordPress update script
+│   └── health-check.sh       # Infrastructure health check
+├── configs/
+│   ├── haproxy/              # HAProxy configuration snippets
+│   ├── wordpress/            # WordPress config templates
+│   ├── bookstack/            # BookStack config templates
+│   └── pfsense/              # pfSense export configs
+└── templates/
+    └── new-backend.md        # Template for adding new backends
+```
+
+## Quick Start
+
+### Prerequisites
+
+- pfSense with HAProxy and ACME packages installed
+- Cloudflare account with domain(s) configured
+- Turnkey Linux VMs (WordPress, BookStack)
+
+### Initial Setup
+
+See [Full Documentation](docs/THERAPEUTIC_SOCIETY_PROJECT.md) for complete setup instructions.
+
+### Common Tasks
+
+```bash
+# SSH into WordPress
+ssh root@192.168.86.214
+
+# SSH into BookStack
+ssh root@192.168.86.113
+
+# Update WordPress (on WordPress VM)
+cd /var/www/wordpress
+wp core update --allow-root
+wp plugin update --all --allow-root
+
+# Restart HAProxy (on pfSense)
+/usr/local/etc/rc.d/haproxy.sh restart
+```
+
+## Configuration
+
+### Environment Variables
+
+Copy the example env file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+### Sensitive Data
+
+**Never commit sensitive data!** Store credentials in:
+- Password manager
+- `.env` file (gitignored)
+- Encrypted vault
+
+## Documentation
+
+- [Full Project Documentation](docs/THERAPEUTIC_SOCIETY_PROJECT.md)
+- [Adding New Backends](templates/new-backend.md)
+
+## Maintenance
+
+### Backups
+
+```bash
+# Run WordPress backup
+./scripts/backup-wordpress.sh
+
+# Run BookStack backup
+./scripts/backup-bookstack.sh
+```
+
+### Health Checks
+
+```bash
+# Check all services
+./scripts/health-check.sh
+```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+## License
+
+Private infrastructure - Not for public distribution.
+
+---
+
 # Therapeutic Society Web Hosting Infrastructure
 
 > **Project Documentation for VS Code + Claude CLI**
-> 
+>
 > Version: 1.0.0
 > Last Updated: 2025-01-17
 
@@ -353,7 +489,7 @@ SSL Offloading:
 | 2 | Use Backend | acl_therapeuticsociety | wordpress_therapeuticsociety |
 | 3 | Use Backend | acl_therapeutic_society_hyphen | wordpress_therapeuticsociety |
 
-> **⚠️ IMPORTANT**: Subdomain ACLs MUST come before root domain ACLs!
+> **IMPORTANT**: Subdomain ACLs MUST come before root domain ACLs!
 
 ---
 
@@ -647,7 +783,7 @@ clog /var/log/haproxy.log
 
 ## Credentials Storage
 
-> **⚠️ SECURITY**: Store these securely (password manager, encrypted vault)
+> **SECURITY**: Store these securely (password manager, encrypted vault)
 
 ```
 # Cloudflare
@@ -673,12 +809,298 @@ BookStack: ssh root@192.168.86.113
 
 ---
 
-## Changelog
+# Adding a New Backend to HAProxy
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-01-17 | Initial documentation created |
+> Template for adding additional services to the infrastructure
+
+## Prerequisites
+
+- [ ] New VM/server deployed and accessible on LAN
+- [ ] Service running and responding on expected port
+- [ ] Subdomain or domain chosen
+- [ ] Cloudflare API credentials available
+
+## Step-by-Step Process
+
+### 1. Cloudflare DNS
+
+**Cloudflare Dashboard → [your domain] → DNS → Records → Add**
+
+For a **subdomain** (e.g., `app.therapeuticsociety.org`):
+
+| Field | Value |
+|-------|-------|
+| Type | CNAME |
+| Name | `app` |
+| Target | `therapeuticsociety.org` |
+| Proxy | Proxied (orange cloud) |
+
+For a **new domain** (e.g., `newdomain.org`):
+
+| Field | Value |
+|-------|-------|
+| Type | A |
+| Name | `@` |
+| IPv4 | Your WAN IP |
+| Proxy | Proxied (orange cloud) |
 
 ---
 
-*Generated for migration to VS Code with Claude CLI plugin*
+### 2. Dynamic DNS (if new domain)
+
+**pfSense → Services → Dynamic DNS → Add**
+
+| Field | Value |
+|-------|-------|
+| Service Type | Cloudflare |
+| Interface | WAN |
+| Hostname | `@` |
+| Domain | `newdomain.org` |
+| Username | token |
+| Password | `<API_TOKEN>` |
+| Proxied | ✓ Checked |
+| Description | Cloudflare DDNS - newdomain.org |
+
+**Save & Force Update**
+
+---
+
+### 3. ACME Certificate
+
+**pfSense → Services → ACME → Certificates → Add**
+
+| Field | Value |
+|-------|-------|
+| Name | `app_therapeuticsociety_cert` |
+| Status | Active |
+| ACME Account | letsencrypt-prod |
+| Private Key | 256-bit ECDSA |
+
+**Domain SAN List:**
+
+| Field | Value |
+|-------|-------|
+| Domainname | `app.therapeuticsociety.org` |
+| Method | DNS-Cloudflare |
+| Token | `<API_TOKEN>` |
+| Account ID | `<ACCOUNT_ID>` |
+| Zone ID | `<ZONE_ID>` |
+
+**Actions List:**
+
+| Field | Value |
+|-------|-------|
+| Command | `/usr/local/etc/rc.d/haproxy.sh restart` |
+
+**Save → Issue/Renew**
+
+---
+
+### 4. HAProxy Backend
+
+**pfSense → Services → HAProxy → Backend → Add**
+
+| Field | Value |
+|-------|-------|
+| Name | `app_backend` |
+| Mode | HTTP |
+
+**Server List → Add:**
+
+| Field | Value |
+|-------|-------|
+| Name | `app-vm` |
+| Address | `192.168.86.XXX` |
+| Port | `80` |
+| SSL | Unchecked |
+
+**Health Check:**
+
+| Field | Value |
+|-------|-------|
+| Method | None |
+
+**Save**
+
+---
+
+### 5. HAProxy Frontend Update
+
+**pfSense → Services → HAProxy → Frontend → Edit `shared_https_frontend`**
+
+#### Add Certificate
+
+Under **SSL Offloading → Additional Certificates:**
+
+Add: `app_therapeuticsociety_cert`
+
+#### Add ACL
+
+| Name | Expression | Value |
+|------|------------|-------|
+| `acl_app` | Host matches | `app.therapeuticsociety.org` |
+
+> **IMPORTANT**: Add subdomain ACLs **BEFORE** root domain ACLs!
+
+#### Add Action
+
+| Action | Condition | Backend |
+|--------|-----------|---------|
+| Use Backend | `acl_app` | `app_backend` |
+
+> **IMPORTANT**: Add subdomain actions **BEFORE** root domain actions!
+
+**Save → Apply Changes**
+
+---
+
+### 6. Application Configuration
+
+SSH into the new server and configure the application to:
+
+1. Accept the new URL
+2. Trust the reverse proxy headers
+
+Example for a generic app:
+
+```bash
+# Example environment variable
+APP_URL=https://app.therapeuticsociety.org
+
+# Trust proxy headers (varies by application)
+TRUSTED_PROXIES=*
+```
+
+---
+
+### 7. Testing
+
+1. **Test from outside network** (cellular or VPN):
+   ```bash
+   curl -I https://app.therapeuticsociety.org
+   ```
+
+2. **Check HAProxy status**:
+   - pfSense → Status → HAProxy
+   - Backend should show green
+
+3. **Verify SSL**:
+   ```bash
+   echo | openssl s_client -servername app.therapeuticsociety.org -connect app.therapeuticsociety.org:443 2>/dev/null | openssl x509 -noout -dates
+   ```
+
+---
+
+### 8. Update Documentation
+
+Add the new service to:
+
+- [ ] `docs/THERAPEUTIC_SOCIETY_PROJECT.md`
+- [ ] `README.md`
+- [ ] `.env.example` (if credentials needed)
+- [ ] `scripts/health-check.sh` (add URL and service checks)
+
+---
+
+## Checklist Template
+
+```markdown
+## New Backend: [Service Name]
+
+- [ ] VM deployed at 192.168.86.XXX
+- [ ] Service running on port XX
+- [ ] Cloudflare DNS record added
+- [ ] Dynamic DNS configured (if new domain)
+- [ ] ACME certificate issued
+- [ ] HAProxy backend created
+- [ ] HAProxy ACL added (correct order!)
+- [ ] HAProxy action added (correct order!)
+- [ ] Application configured for new URL
+- [ ] Tested from external network
+- [ ] Documentation updated
+```
+
+---
+
+## Quick Reference: ACL Order
+
+Always maintain this order (subdomains first):
+
+```
+1. acl_books              → books.therapeuticsociety.org
+2. acl_app                → app.therapeuticsociety.org
+3. acl_[other subdomains] → [subdomain].therapeuticsociety.org
+4. acl_therapeuticsociety → therapeuticsociety.org
+5. acl_therapeutic_hyphen → therapeutic-society.org
+```
+
+---
+
+# Changelog
+
+All notable changes to the Therapeutic Society Infrastructure will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [Unreleased]
+
+### Planned
+- Split DNS for internal LAN access
+- Cloudflare IP restriction
+- Automated backup scheduling
+- Monitoring and alerting
+
+---
+
+## [1.0.0] - 2025-01-17
+
+### Added
+- Initial infrastructure setup
+- pfSense with HAProxy reverse proxy
+- WordPress site on Turnkey Linux VM (192.168.86.214)
+- BookStack wiki on Turnkey Linux VM (192.168.86.113)
+- SSL certificates via ACME/Let's Encrypt
+- Dynamic DNS for Cloudflare
+- Multi-domain support:
+  - therapeuticsociety.org
+  - therapeutic-society.org
+  - books.therapeuticsociety.org
+
+### Infrastructure
+- HAProxy frontend on ports 80 (redirect) and 443 (SSL)
+- HTTP to HTTPS redirect
+- Health checks disabled for reliability
+- ACL-based routing for multiple backends
+
+### Documentation
+- Full project documentation
+- Backup scripts (WordPress, BookStack)
+- Health check script
+- Update script for WordPress
+- Template for adding new backends
+
+---
+
+## Version History Format
+
+```
+## [X.Y.Z] - YYYY-MM-DD
+
+### Added
+- New features
+
+### Changed
+- Changes to existing functionality
+
+### Deprecated
+- Features to be removed in future
+
+### Removed
+- Removed features
+
+### Fixed
+- Bug fixes
+
+### Security
+- Security improvements
+```
